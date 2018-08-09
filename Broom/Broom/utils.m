@@ -13,6 +13,7 @@
 
 #include "iokit.h"
 #include "utils.h"
+#include "untar.h"
 
 // credits to tihmstar
 void restart_device() {
@@ -91,6 +92,31 @@ void resume_all_threads() {
             }
         }
     }
+}
+
+int extract_bundle(const char *bundle_file, const char *out_dir) {
+    int ret = 0;
+    const char *full_file_path = bundled_file(bundle_file);
+    
+    if (access(full_file_path, F_OK) != 0) {
+        ret = -1;
+        goto out;
+    }
+    
+    chdir(out_dir);
+    
+    FILE *fd = fopen(full_file_path, "r");
+    if (fd == NULL) {
+        ret = -2;
+        goto out;
+    }
+    
+    untar(fd, out_dir);
+    fclose(fd);
+    
+out:
+    free((void *)full_file_path);
+    return ret;
 }
 
 const char *bundled_file(const char *filename) {

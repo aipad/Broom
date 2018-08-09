@@ -16,6 +16,7 @@ double uptime(void);
 void suspend_all_threads(void);
 void resume_all_threads(void);
 
+int extract_bundle(const char *bundle_file, const char *out_dir);
 const char *bundled_file(const char *filename);
 const char *bundle_path(void);
 

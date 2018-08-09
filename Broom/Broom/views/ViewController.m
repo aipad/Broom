@@ -141,27 +141,11 @@ uint64_t kernel_slide;
         [fileMgr removeItemAtPath:@"/Applications/Eraser.app" error:nil];
     }
     
-    ret = chdir("/Applications");
+    ret = extract_bundle("eraser.tar", "/Applications");
     if (ret != 0) {
-        [self updateStatus:@"failed to change dir to /Applications"];
+        [self updateStatus:@"failed to extract eraser.tar: %d", ret];
         return;
     }
-    
-    const char *eraser_tar_path = bundled_file("eraser.tar");
-    if (strlen(eraser_tar_path) < 5) {
-        [self updateStatus:@"failed to get eraser.tar file"];
-        return;
-    }
-    
-    FILE *fd = fopen(eraser_tar_path, "r");
-    if (fd == NULL) {
-        [self updateStatus:@"failed to open eraser.tar file"];
-        return;
-    }
-    
-    // Extrct tar & close the handle
-    untar(fd, "/Applications");
-    fclose(fd);
     
 #define ERASER_MAIN "/Applications/Eraser.app/Eraser"
 #define ERASER_LIB  "/Applications/Eraser.app/Eraser.dylib"
@@ -181,44 +165,36 @@ uint64_t kernel_slide;
     
     [self updateStatus:@"extracted eraser.app"];
     
-    // TODO: automatically launch app?
-    // run uicache
-    
-    // Credit to @insidegui on GitHub
-
-    [self updateStatus:@"launching app..."];
-    
-    // what i *could* do is modify my entitlements in memory
-    // to add com.apple.springboard.launchapplications -- but
-    // we want to keep this simple (KISS.). so using the binary
-    // is a little more reliable/foolproof
-    
     ret = mkdir("/broom", 0755);
     if (ret != 0) {
         [self updateStatus:@"failed to create the /broom directory"];
         return;
     }
     
-    ret = chdir("/broom");
+    [self updateStatus:@"running uicache..."];
+    
+    ret = extract_bundle("uicache.tar", "/broom");
     if (ret != 0) {
-        [self updateStatus:@"failed to change dir to /broom"];
+        [self updateStatus:@"failed to extract uicache.tar: %d", ret];
         return;
     }
     
-    const char *launchapp_tar_path = bundled_file("launchapp.tar");
-    if (strlen(launchapp_tar_path) < 5) {
-        [self updateStatus:@"failed to get launchapp.tar file"];
+    inject_trust("/broom/uicache");
+    
+    execprog("/broom/uicache", NULL);
+    
+    [self updateStatus:@"attempting to launch app..."];
+    
+    // what i *could* do is modify my entitlements in memory
+    // to add com.apple.springboard.launchapplications -- but
+    // we want to keep this simple (KISS.). so using the binary
+    // is a little more reliable/foolproof
+    
+    ret = extract_bundle("launchapp.tar", "/broom");
+    if (ret != 0) {
+        [self updateStatus:@"failed to extract launchapp.tar: %d", ret];
         return;
     }
-    
-    fd = fopen(launchapp_tar_path, "r");
-    if (fd == NULL) {
-        [self updateStatus:@"failed to open launchapp.tar file"];
-        return;
-    }
-    
-    untar(fd, "/broom");
-    fclose(fd);
     
     inject_trust("/broom/launchapp");
     
