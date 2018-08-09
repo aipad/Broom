@@ -27,7 +27,7 @@
 
 @implementation ViewController
 
-NSString *Version = @"Broom: v1.0.0 - by PsychoTea, w/ thanks to saurik";
+NSString *Version = @"Broom: v1.0.1 - by PsychoTea, w/ thanks to saurik";
 BOOL allowedToRun = TRUE;
 
 offsets_t *offsets;
