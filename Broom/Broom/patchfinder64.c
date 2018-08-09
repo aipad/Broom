@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+
 #include "kernel.h"
 
 typedef unsigned long long addr_t;
@@ -421,7 +422,6 @@ follow_cbz(const uint8_t *buf, addr_t cbz)
 
 #ifdef __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__
 #include <mach/mach.h>
-size_t kread(uint64_t where, void *p, size_t size);
 #endif
 
 static uint8_t *kernel = NULL;

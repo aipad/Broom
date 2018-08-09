@@ -105,21 +105,21 @@ uint64_t kernel_slide;
     
     [self updateStatus:@"v0rtex success!"];
     
+    // initialize kernel.m stuff
+    uint64_t kernel_task_addr = rk64(offsets->kernel_task + kernel_slide);
+    uint64_t kern_proc = rk64(kernel_task_addr + offsets->task_bsd_info);
+    setup_kernel_tools(kernel_task, kern_proc);
+    
     // initialize patchfinder64 & amfi stuff
     init_patchfinder(NULL, kernel_base);
     init_amfi();
-    
-    // initialize kernel.m stuff
-    uint64_t kernel_task_addr = rk64(offs->kernel_task + kernel_slide);
-    uint64_t kern_proc = rk64(kernel_task_addr + offs->task_bsd_info);
-    setup_kernel_tools(kernel_task, kern_proc);
     
     [self updateStatus:@"initialized patchfinders, etc"];
     
     // remount '/' as r/w
     NSOperatingSystemVersion osVersion = [[NSProcessInfo processInfo] operatingSystemVersion];
     int pre103 = osVersion.minorVersion < 3 ? 1 : 0;
-    ret = mount_root(kernel_slide, offs->root_vnode, pre103);
+    ret = mount_root(kernel_slide, offsets->root_vnode, pre103);
     
     if (ret != 0) {
         [self updateStatus:@"failed to remount disk0s1s1: %d", ret];
