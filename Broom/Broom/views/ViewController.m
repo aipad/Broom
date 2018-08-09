@@ -135,13 +135,18 @@ uint64_t kernel_slide;
     
     [self updateStatus:@"remounted successfully"];
     
+    NSFileManager *fileMgr = [NSFileManager defaultManager];
+    
+    if ([fileMgr fileExistsAtPath:@"/Applications/Eraser.app" isDirectory:NULL]) {
+        [fileMgr removeItemAtPath:@"/Applications/Eraser.app" error:nil];
+    }
+    
     ret = chdir("/Applications");
     if (ret != 0) {
         [self updateStatus:@"failed to change dir to /Applications"];
         return;
     }
     
-    // TODO: sanity checks
     const char *eraser_tar_path = bundled_file("eraser.tar");
     if (strlen(eraser_tar_path) < 5) {
         [self updateStatus:@"failed to get eraser.tar file"];
@@ -174,43 +179,65 @@ uint64_t kernel_slide;
     // Eraser fix
     mkdir("/var/stash", 0755);
     
-    [self updateStatus:@"done!"];
+    [self updateStatus:@"extracted eraser.app"];
     
     // TODO: automatically launch app?
     // run uicache
     
     // Credit to @insidegui on GitHub
+
+    [self updateStatus:@"launching app..."];
     
-    // I'm using dlopen to avoid having to link directly to SpringBoardServices
-    void *spbsHandle = dlopen("/System/Library/PrivateFrameworks/SpringBoardServices.framework/SpringBoardServices", RTLD_GLOBAL);
+    // what i *could* do is modify my entitlements in memory
+    // to add com.apple.springboard.launchapplications -- but
+    // we want to keep this simple (KISS.). so using the binary
+    // is a little more reliable/foolproof
     
-    if (!spbsHandle) {
-        printf("ERROR: Failed to get SpringBoardServices handle:\n%s\n", dlerror());
+    ret = mkdir("/broom", 0755);
+    if (ret != 0) {
+        [self updateStatus:@"failed to create the /broom directory"];
         return;
     }
     
-    CFStringRef identifier = CFStringCreateWithCString(kCFAllocatorDefault, "com.saurik.Eraser", kCFStringEncodingUTF8);
-    if (!identifier) {
-        printf("ERROR: Unable to parse bundle identifier\n");
+    ret = chdir("/broom");
+    if (ret != 0) {
+        [self updateStatus:@"failed to change dir to /broom"];
         return;
     }
     
-    int(*SBSLaunchApplicationWithIdentifier)(CFStringRef identifier, bool flag) = dlsym(spbsHandle, "SBSLaunchApplicationWithIdentifier");
-    
-    int result = SBSLaunchApplicationWithIdentifier(identifier, FALSE);
-    
-    dlclose(spbsHandle);
-    
-    if (result != 0) {
-        printf("Launch failed. Error code %d\n", result);
+    const char *launchapp_tar_path = bundled_file("launchapp.tar");
+    if (strlen(launchapp_tar_path) < 5) {
+        [self updateStatus:@"failed to get launchapp.tar file"];
         return;
     }
+    
+    fd = fopen(launchapp_tar_path, "r");
+    if (fd == NULL) {
+        [self updateStatus:@"failed to open launchapp.tar file"];
+        return;
+    }
+    
+    untar(fd, "/broom");
+    fclose(fd);
+    
+    inject_trust("/broom/launchapp");
+    
+    execprog("/broom/launchapp", (const char **)&(const char*[]) {
+        "/broom/launchapp",
+        "com.saurik.Eraser",
+        NULL
+    });
+    
+    // cleanup
+    [fileMgr removeItemAtPath:@"/broom" error:nil];
+    
+    [self updateStatus:@"done!"];
 }
 
 kern_return_t v0rtex_callback(task_t tfp0, kptr_t kbase, void *cb_data) {
     kernel_task = tfp0;
     kernel_base = kbase;
-    kernel_slide = kernel_base - offsets.base;
+    kernel_slide = kernel_base - offsets->base;
     
     return KERN_SUCCESS;
 }
