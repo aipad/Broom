@@ -30,7 +30,7 @@
 NSString *Version = @"Broom: v1.0.0 - by PsychoTea, w/ thanks to saurik";
 BOOL allowedToRun = TRUE;
 
-offsets_t offsets;
+offsets_t *offsets;
 
 task_t   kernel_task;
 uint64_t kernel_base;
@@ -81,9 +81,7 @@ uint64_t kernel_slide;
     [self updateStatus:@"running..."];
     
     // grab offsets via liboffsetfinder64
-    // this is retarded
-    offsets_t *offs = get_offsets();
-    offsets = *offs;
+    offsets = get_offsets();
     
     [self updateStatus:@"grabbed offsets"];
     
@@ -91,7 +89,7 @@ uint64_t kernel_slide;
     suspend_all_threads();
     
     // run v0rtex
-    kret = v0rtex(&offsets, &v0rtex_callback, NULL);
+    kret = v0rtex(offsets, &v0rtex_callback, NULL);
     
     // resume app
     resume_all_threads();
